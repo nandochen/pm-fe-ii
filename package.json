@@ -1,12 +1,40 @@
 {
   "name": "pm_fe_reacr",
+  "version": "0.1.0",
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "cross-env NODE_ENV=development npm run build --workspaces --if-present",
+    "build:prod": "cross-env NODE_ENV=production npm run build --workspaces --if-present",
     "prebuild": "npm run prebuild --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present"
   },
   "type": "module",
   "workspaces": [
     "src/frontend"
-  ]
+  ],
+  "dependencies": {
+    "@dfinity/auth-client": "^2.2.0",
+    "@dfinity/identity": "^2.2.0",
+    "@dfinity/principal": "^2.2.0",
+    "@ton/core": "^0.59.0",
+    "@ton/crypto": "^3.3.0",
+    "@ton/ton": "^15.1.0",
+    "buffer": "^6.0.3",
+    "crypto": "^1.0.1",
+    "dompurify": "^3.2.3",
+    "get-random-values": "^3.0.0",
+    "react-html-parser": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.3.1",
+    "@types/react-html-parser": "^2.0.6",
+    "cross-env": "^7.0.3",
+    "prettier": "^3.0.0",
+    "source-map-support": "^0.5.21",
+    "ts-loader": "^9.4.3",
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.15.7",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.12"
+  }
 }

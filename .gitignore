@@ -23,4 +23,7 @@ node_modules/
 src/frontend/dist/
 
 # environment variables
+package-lock.json
 .env
+.env.development
+.env.production
