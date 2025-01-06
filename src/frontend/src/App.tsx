@@ -18,10 +18,11 @@ const explorer: string = 'https://testnet.tonviewer.com/';
 const workchain = 0; // Usually you need a workchain 0
 const devWalletAddress = '0QDQBpCcv361Q785LZ33ky4fowYlgSYLTEIRTPzHVOaAhsVm';
 
-const BACKEND_API_URL = import.meta.env.VITE_BACKEND_CANISTER_ENDPOINT;
-const II_URL = import.meta.env.VITE_II_CANISTER_ENDPOINT;
+const BACKEND_API_URL: string = import.meta.env.VITE_BACKEND_CANISTER_ENDPOINT;
+const II_URL: string = import.meta.env.VITE_II_CANISTER_ENDPOINT;
 const DEFAULT_MAX_TIME_TO_LIVE = /* hours */ BigInt(8) * /* nanoseconds */ BigInt(3_600_000_000_000);
 const ED25519_KEY_LABEL = 'Ed25519';
+const LOCAL_STORAGE_ACCESS_TOKEN_KEY = 'PEYMATE_ACCESS_TOKEN';
 
 interface sysWallet {
   address: string;
@@ -48,6 +49,7 @@ const App = () => {
   const [transactionsResponse, setTransactionsResponse] = useState('...');
   const [sendTONAddress, setSendTONAddress] = useState(devWalletAddress);
   const [createWalletCFResponse, setCreateWalletCFResponse] = useState('...');
+  const [accessTokenResponse, setAccessTokenResponse] = useState('...')
 
   // II
   /**
@@ -151,6 +153,41 @@ const App = () => {
     setCreateWalletCFResponse(`TON Address: ${address}<br />Principal: ${_addrICP}<br />Public Key: ${pubKeyStr}<br />Secret Key: ${keyPair[1]}`);
   }
 
+  const fetchAccessTokenByPrincipal = async (): Promise<void> => {
+    setAccessTokenResponse('Fetching access token...');
+
+    if (ii === null) {
+      setAccessTokenResponse('Please login to II first');
+      await IILogin();
+      return;
+    }
+
+    const principalId = ii.getPrincipal().toText();
+
+    const response = await fetch(
+      `${BACKEND_API_URL}auth/get-access-token`,
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ principalId })
+      }
+    );
+
+    const responseJson = await response.json();
+
+    if (responseJson.ok) {
+      setAccessTokenResponse(JSON.stringify(responseJson));
+      if (responseJson.result) {
+        localStorage.setItem(LOCAL_STORAGE_ACCESS_TOKEN_KEY, responseJson.result);
+      }
+    } else {
+      setAccessTokenResponse('Fetching access token failed');
+    }
+  }
+
   /**
    * ICP Chain Fusion - identity
    */
@@ -200,6 +237,8 @@ const App = () => {
     setBalanceResponse('Loading...');
 
     try {
+      const jwt = localStorage.getItem(LOCAL_STORAGE_ACCESS_TOKEN_KEY);
+
       // https outcall
       const response = await fetch(
         `${BACKEND_API_URL}token/balance`,
@@ -207,7 +246,8 @@ const App = () => {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwt}`
           },
           body: JSON.stringify({ address: sysWallet.address})
         }
@@ -234,6 +274,8 @@ const App = () => {
     setTransactionsResponse('Loading...');
 
     try {
+      const jwt = localStorage.getItem(LOCAL_STORAGE_ACCESS_TOKEN_KEY);
+
       // https outcall
       const response = await fetch(
         `${BACKEND_API_URL}token/transactions`,
@@ -241,7 +283,8 @@ const App = () => {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwt}`
           },
           body: JSON.stringify({ address: sysWallet.address})
         }
@@ -370,42 +413,51 @@ const App = () => {
           <a href="#" className="btn btn-sm btn-primary btn-ii" onClick={IILout}>Logout II</a>
         </div>
         <div className="card-body">
-            <p className="card-text small">@difinity/identity.Ed25519KeyIdentity</p>
-            <p className="card-text text-muted small">{ReactHtmlParser(DOMPurify.sanitize(createWalletCFResponse))}</p>
+          <p className="card-text small">@difinity/identity.Ed25519KeyIdentity</p>
+          <p className="card-text text-muted small">{ReactHtmlParser(DOMPurify.sanitize(createWalletCFResponse))}</p>
         </div>
+      </div>
+      <div className="card mb-3">
+        <div className="card-header">
+          <a href="#" className="btn btn-sm btn-primary" onClick={fetchAccessTokenByPrincipal}>Fetch Access Token</a>
         </div>
-        <div className="card mb-3">
-            <div className="card-header">
-                <a href="#" className="btn btn-sm btn-primary" onClick={getBalance}>Get Balance</a>
-            </div>
-            <div className="card-body">
-                <p className="card-text small">HTTPS Outcalls &lt;-&gt; TON RPC</p>
-                <p className="card-text text-muted small">{ReactHtmlParser(DOMPurify.sanitize(balanceResponse))}</p>
-            </div>
+        <div className="card-body">
+          <p className="card-text small">Access Token (JWT)</p>
+          <p className="card-text text-muted small">{ReactHtmlParser(DOMPurify.sanitize(accessTokenResponse))}</p>
         </div>
-        <div className="card mb-3">
-            <div className="card-header">
-                <a href="#" className="btn btn-sm btn-primary" onClick={sendTON}>Send TON</a>
-            </div>
-            <div className="card-body">
-                <p className="card-text small">
-                  <input type="text" className="form-control" value={sendTONAddress} onChange={handleAddressChange} />
-                </p>
-                <p className="card-text text-muted small">{ReactHtmlParser(DOMPurify.sanitize(sendTONResponse))}</p>
-            </div>
+      </div>
+      <div className="card mb-3">
+        <div className="card-header">
+          <a href="#" className="btn btn-sm btn-primary" onClick={getBalance}>Get Balance</a>
         </div>
-        <div className="card mb-3">
-            <div className="card-header">
-                <a href="#" className="btn btn-sm btn-primary" onClick={getTransactions}>Get Transactions</a>
-            </div>
-            <div className="card-body">
-                <p className="card-text small">HTTPS Outcalls &lt;-&gt; TON RPC</p>
-                <p className="card-text text-muted small">{ReactHtmlParser(DOMPurify.sanitize(transactionsResponse))}</p>
-            </div>
+        <div className="card-body">
+          <p className="card-text small">HTTPS Outcalls &lt;-&gt; TON RPC</p>
+          <p className="card-text text-muted small">{ReactHtmlParser(DOMPurify.sanitize(balanceResponse))}</p>
         </div>
+      </div>
+      <div className="card mb-3">
+        <div className="card-header">
+          <a href="#" className="btn btn-sm btn-primary" onClick={sendTON}>Send TON</a>
+        </div>
+        <div className="card-body">
+          <p className="card-text small">
+            <input type="text" className="form-control" value={sendTONAddress} onChange={handleAddressChange} />
+          </p>
+          <p className="card-text text-muted small">{ReactHtmlParser(DOMPurify.sanitize(sendTONResponse))}</p>
+        </div>
+      </div>
+      <div className="card mb-3">
+        <div className="card-header">
+          <a href="#" className="btn btn-sm btn-primary" onClick={getTransactions}>Get Transactions</a>
+        </div>
+        <div className="card-body">
+          <p className="card-text small">HTTPS Outcalls &lt;-&gt; TON RPC</p>
+          <p className="card-text text-muted small">{ReactHtmlParser(DOMPurify.sanitize(transactionsResponse))}</p>
+        </div>
+      </div>
 
-        <p className="text-muted">Dev Wallet: {devWalletAddress}</p>
-      </>
+      <p className="text-muted">Dev Wallet: {devWalletAddress}</p>
+    </>
   );
 }
 
