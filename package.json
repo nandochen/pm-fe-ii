@@ -1,6 +1,6 @@
 {
-  "name": "pm_fe_reacr",
-  "version": "0.1.0",
+  "name": "pm_fe_react",
+  "version": "0.1.5",
   "scripts": {
     "build": "cross-env NODE_ENV=development npm run build --workspaces --if-present",
     "build:prod": "cross-env NODE_ENV=production npm run build --workspaces --if-present",
